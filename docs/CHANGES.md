@@ -10,7 +10,8 @@ A smaller first step: only water table depth, groundwater temperature, and air t
 * Dashboard: groundwater-temperature gauge replaces the EC gauge; separate 7-day temperature graph (groundwater vs air).
 * Added the `.gitignore` and the CI workflow that the README referred to but that were missing from the repository. CI also compiles the node and gateway firmware.
 * BOM: radiation shield and reference thermometer added; TL-136 supply corrected to 12-32 V in the buying notes.
-* Validated with ESPHome 2026.11.0 (`esphome config`, no warnings) for both nodes and the gateway. Not tested on hardware.
+* **First real compile** (in CI) found two C++ errors that also exist on `main`: `esp_random()` is not declared in ESPHome lambdas (now `random_uint32()`), and the openSenseMap `Authorization` header lambda must return `const char*` (now `token.c_str()`).
+* Validated with ESPHome 2026.11.0: `esphome config` without warnings and `esphome compile` succeeds for the node and the gateway. Not tested on hardware.
 
 ---
 

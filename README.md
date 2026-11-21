@@ -7,7 +7,7 @@
 An open-source, low-cost citizen science stack for monitoring groundwater under agricultural land.
 Built around the **Heltec WiFi LoRa 32 V3 (ESP32-S3 + SX1262)**: battery-powered field nodes send hourly readings over raw LoRa (868 MHz) to one gateway that feeds **Home Assistant** and the public **openSenseMap** map.
 
-> **Status:** the ESPHome configs pass `esphome config` validation (ESPHome 2026.11) and CI re-checks this on every push. They have **not yet been tested on hardware**. Bench-test one node first (see the Field Deployment Guide).
+> **Status:** the ESPHome configs validate and compile (ESPHome 2026.11); CI re-checks both on every push. They have **not yet been tested on hardware**. Bench-test one node first (see the Field Deployment Guide).
 
 ---
 
