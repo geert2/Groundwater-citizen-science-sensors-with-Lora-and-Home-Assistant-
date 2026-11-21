@@ -1,4 +1,4 @@
-# Indoor LoRa gateway: receives node packets, exposes them to Home Assistant and
+# LITE indoor LoRa gateway (depth, groundwater temperature, air temperature + humidity): receives node packets, exposes them to Home Assistant and
 # uploads to openSenseMap.
 #
 # Sources: ESPHome packet_transport [R2], sx126x [R1], http_request [R6]; openSenseMap upload [R26][R27][R28]
@@ -17,16 +17,18 @@ substitutions:
   w1_box_id: !secret well_1_osem_box_id
   w1_token: !secret well_1_osem_token
   w1_depth_id: !secret well_1_osem_depth_id
-  w1_ec_id: !secret well_1_osem_ec_id
   w1_temp_id: !secret well_1_osem_temp_id
+  w1_air_temp_id: !secret well_1_osem_air_temp_id
+  w1_air_hum_id: !secret well_1_osem_air_hum_id
 
   # Well 2
   w2_depth_offset: !secret well_2_sensor_depth_m
   w2_box_id: !secret well_2_osem_box_id
   w2_token: !secret well_2_osem_token
   w2_depth_id: !secret well_2_osem_depth_id
-  w2_ec_id: !secret well_2_osem_ec_id
   w2_temp_id: !secret well_2_osem_temp_id
+  w2_air_temp_id: !secret well_2_osem_air_temp_id
+  w2_air_hum_id: !secret well_2_osem_air_hum_id
 
 packages:
   well1: !include
@@ -39,8 +41,9 @@ packages:
       box_id: ${w1_box_id}
       token: ${w1_token}
       depth_id: ${w1_depth_id}
-      ec_id: ${w1_ec_id}
       temp_id: ${w1_temp_id}
+      air_temp_id: ${w1_air_temp_id}
+      air_hum_id: ${w1_air_hum_id}
   well2: !include
     file: well-package.yaml
     vars:
@@ -51,8 +54,9 @@ packages:
       box_id: ${w2_box_id}
       token: ${w2_token}
       depth_id: ${w2_depth_id}
-      ec_id: ${w2_ec_id}
       temp_id: ${w2_temp_id}
+      air_temp_id: ${w2_air_temp_id}
+      air_hum_id: ${w2_air_hum_id}
 
 esphome:
   name: water-well-gateway
@@ -139,11 +143,13 @@ script:
       box_id: string
       token: string
       depth_sensor_id: string
-      ec_sensor_id: string
       temp_sensor_id: string
+      air_temp_sensor_id: string
+      air_hum_sensor_id: string
       depth_val: float
-      ec_val: float
       temp_val: float
+      air_temp_val: float
+      air_hum_val: float
     then:
       - http_request.post:
           url: !lambda 'return "https://api.opensensemap.org/boxes/" + box_id + "/data";'
@@ -161,9 +167,10 @@ script:
               if (p.size() > 1) p += ",";
               p += buf;
             };
-            add(depth_sensor_id, depth_val, R"({"sensor":"%s","value":%.3f})");
-            add(ec_sensor_id,    ec_val,    R"({"sensor":"%s","value":%.0f})");
-            add(temp_sensor_id,  temp_val,  R"({"sensor":"%s","value":%.2f})");
+            add(depth_sensor_id,    depth_val,    R"({"sensor":"%s","value":%.3f})");
+            add(temp_sensor_id,     temp_val,     R"({"sensor":"%s","value":%.2f})");
+            add(air_temp_sensor_id, air_temp_val, R"({"sensor":"%s","value":%.1f})");
+            add(air_hum_sensor_id,  air_hum_val,  R"({"sensor":"%s","value":%.0f})");
             p += "]";
             return p;
           on_response:

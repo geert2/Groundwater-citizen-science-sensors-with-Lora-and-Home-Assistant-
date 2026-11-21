@@ -1,4 +1,22 @@
-# Changes after the technical review
+# Changes
+
+## `lite` branch (21 November 2026)
+A smaller first step: only water table depth, groundwater temperature, and air temperature + humidity.
+
+* **Removed:** EC/TDS sensor (firmware, gateway, openSenseMap upload, dashboard, BOM, calibration procedure, wiring), the ADS1115 option (`depth-adc-*.yaml`, example node, diagram) and the air-pressure value.
+* **BME280 is now required** and moves **outside the enclosure into a radiation shield**: it reports *Air Temperature* and *Air Humidity* (broadcast IDs `at`, `ah`) instead of enclosure temperature/humidity. I²C bus slowed to 50 kHz for the ≤ 1 m cable.
+* The depth ADC (`GPIO5`) is now defined directly in `common-well-node.yaml`.
+* Gateway uploads four values to openSenseMap: depth, groundwater temperature, air temperature, air humidity (new secrets `well_N_osem_air_temp_id`, `well_N_osem_air_hum_id`; `well_N_osem_ec_id` removed).
+* Dashboard: groundwater-temperature gauge replaces the EC gauge; separate 7-day temperature graph (groundwater vs air).
+* Added the `.gitignore` and the CI workflow that the README referred to but that were missing from the repository. CI also compiles the node and gateway firmware.
+* BOM: radiation shield and reference thermometer added; TL-136 supply corrected to 12-32 V in the buying notes.
+* Validated with ESPHome 2026.11.0 (`esphome config`, no warnings) for both nodes and the gateway. Not tested on hardware.
+
+---
+
+*History of the full version (`main` branch) below; items about EC, the ADS1115 and air pressure no longer apply to `lite`.*
+
+## Changes after the technical review
 
 Validated with ESPHome 2026.10.2 (`esphome config`, zero warnings) for both nodes and the gateway. The C++ was **not** compiled here and nothing has been tested on hardware.
 

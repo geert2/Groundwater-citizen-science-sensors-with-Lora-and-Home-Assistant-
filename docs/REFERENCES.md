@@ -1,5 +1,7 @@
 # References and source check
 
+> On the `lite` branch, [R4], [R18] (ADS1115) and [R19] (EC sensor) are kept for reference only; those parts are not used here.
+
 Every technical claim in this repository that comes from outside the project is listed here with the source it
 was checked against. In the YAML files and docs, `[R#]` points to the entries below.
 

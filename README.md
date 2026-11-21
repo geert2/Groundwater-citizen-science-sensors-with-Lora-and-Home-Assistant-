@@ -1,133 +1,124 @@
-# Agricultural Groundwater Monitor (ESP32 + LoRa)
+# Groundwater Monitor LITE (ESP32 + LoRa)
 
-An open-source, low-cost citizen science hardware and software stack for monitoring **water table depth**, **groundwater temperature**, and **electrical conductivity (EC / fertilizer leaching)** under agricultural land.
+> **This is the `lite` branch**: a smaller first step of the project. It measures only
+> **water table depth** (TL-136), **groundwater temperature** (DS18B20) and **air temperature + humidity** (BME280).
+> No EC sensor, no ADS1115, no air pressure. The full version lives on the `main` branch.
 
-Built around the **Heltec WiFi LoRa 32 V3 (ESP32-S3 + SX1262)**, battery-powered field nodes transmit hourly readings over raw LoRa (868 MHz) to a central gateway that feeds both **Home Assistant** and the public **openSenseMap** citizen science map.
+An open-source, low-cost citizen science stack for monitoring groundwater under agricultural land.
+Built around the **Heltec WiFi LoRa 32 V3 (ESP32-S3 + SX1262)**: battery-powered field nodes send hourly readings over raw LoRa (868 MHz) to one gateway that feeds **Home Assistant** and the public **openSenseMap** map.
 
-> **Status:** the ESPHome configs pass `esphome config` validation (ESPHome 2026.10) and the CI workflow re-checks this on every push. They have **not yet been tested on hardware**. Please bench-test one node (see the Field Deployment Guide) and report what you find. See [`docs/CHANGES.md`](docs/CHANGES.md) for what changed after the technical review.
+> **Status:** the ESPHome configs pass `esphome config` validation (ESPHome 2026.11) and CI re-checks this on every push. They have **not yet been tested on hardware**. Bench-test one node first (see the Field Deployment Guide).
 
 ---
 
-## Key Features
-* **Water Table Depth (0-4 m):** industrial submersible hydrostatic pressure transmitter (TL-136, 0-5 m, 4-20 mA, vented cable).
-* **Water Quality & Recharge:** waterproof DS18B20 temperature probe and an analog EC/TDS sensor with automatic 25 °C temperature compensation.
-* **Enclosure/weather context (BME280, optional):** air pressure, plus temperature and humidity inside the box, which tells you when the desiccant is used up.
-* **Long battery life:** the Heltec `Vext` rail (`GPIO36`) cuts power to all sensors between readings. Expect roughly **1-2 years** from one 3000 mAh+ 18650, depending on your board's real sleep current. **Measure it** (see Field Guide, section 6); the estimate is not a guarantee.
+## What it measures
+
+| Quantity | Sensor | Where | Unit |
+| :-- | :-- | :-- | :-- |
+| Water table depth | TL-136 submersible pressure transmitter (0-5 m, 4-20 mA, vented cable) | in the piezometer | m below ground |
+| Groundwater temperature | waterproof DS18B20 | bundled with the TL-136 | °C |
+| Air temperature | BME280 | radiation shield next to the well | °C |
+| Air humidity | BME280 | radiation shield next to the well | % RH |
+| Battery voltage *(diagnostic)* | onboard divider | node | V |
+
+## Key features
+* **Long battery life:** the Heltec `Vext` rail (`GPIO36`) cuts power to all sensors between readings. Expect roughly **1-2 years** from one 3000 mAh+ 18650; **measure it** (Field Guide, section 6).
 * **Low-battery behaviour:** below 3.4 V a node only reports its battery voltage and sleeps 6 h.
-* **Dual cloud & local output:** one farmhouse gateway receives packets from several wells and pushes them to **openSenseMap** and **Home Assistant**.
-* **Gateway health:** per-well *Node Online* and *Water Below Sensor* entities, plus an editable *Sensor Depth Below Ground* (no reflashing when you re-lower a probe).
+* **Gateway health:** per-well *Node Online* and *Water Below Sensor* entities, and an editable *Sensor Depth Below Ground* (no reflashing when you re-lower a probe).
+* **Simple hardware:** one analog channel (depth), one 1-Wire probe, one I²C module. Fewer parts, fewer splices, no calibration fluids.
 
 ---
 
-## Repository Structure
+## Repository structure
 
 ```text
-agricultural-groundwater-monitor/
-├── README.md                           # Project overview & quickstart
-├── BOM.md                              # Shopping list (~€90-110/node)
-├── LICENSE                             # MIT License
-├── .gitignore                          # Excludes local secrets.yaml and build caches
+├── README.md                       # This file
+├── BOM.md                          # Shopping list (~€85-105/node)
+├── LICENSE                         # MIT
+├── .gitignore                      # Excludes secrets.yaml and build caches
 ├── .github/workflows/
-│   └── esphome-validate.yml            # CI: validates all ESPHome configs
+│   └── esphome-validate.yml        # CI: validates all ESPHome configs
 ├── docs/
-│   ├── field-deployment-guide.md       # Waterproofing, calibration, install, troubleshooting
-│   ├── wiring.md                       # Depth-channel schematic, protection, pinout
-│   ├── img/                            # Wiring and installation diagrams (SVG)
-│   ├── REFERENCES.md                   # Sources for every technical claim, and open items
-│   └── CHANGES.md                      # What was fixed after the technical review
+│   ├── field-deployment-guide.md   # Splicing, bench test, calibration, install, troubleshooting
+│   ├── wiring.md                   # Depth channel, power, BME280, pinout
+│   ├── img/                        # Wiring and installation diagrams (SVG)
+│   ├── REFERENCES.md               # Sources for technical claims
+│   └── CHANGES.md                  # Change log (incl. what lite removed)
 ├── esphome/
-│   ├── secrets.yaml.example            # Template for Wi-Fi, keys & openSenseMap IDs
-│   ├── sync-secrets.sh                 # Copies secrets.yaml next to every config
+│   ├── secrets.yaml.example        # Template for Wi-Fi, keys & openSenseMap IDs
+│   ├── sync-secrets.sh             # Copies secrets.yaml next to every config
 │   ├── gateway/
-│   │   ├── water-well-gateway.yaml     # LoRa receiver + openSenseMap uploader
-│   │   └── well-package.yaml           # Everything for ONE well (reused per well)
+│   │   ├── water-well-gateway.yaml # LoRa receiver + openSenseMap uploader
+│   │   └── well-package.yaml       # Everything for ONE well (reused per well)
 │   └── nodes/
-│       ├── common-well-node.yaml       # Shared node firmware
-│       ├── depth-adc-esp.yaml          # Depth ADC option 1: ESP32 built-in (default)
-│       ├── depth-adc-ads1115.yaml      # Depth ADC option 2: external ADS1115
-│       ├── water-well-node-example-ads1115.yaml  # Example node using the ADS1115
-│       ├── water-well-node-1.yaml      # Node 1 settings & calibration
-│       └── water-well-node-2.yaml      # Node 2 settings & calibration
+│       ├── common-well-node.yaml   # Shared node firmware
+│       ├── water-well-node-1.yaml  # Node 1 settings & calibration
+│       └── water-well-node-2.yaml  # Node 2 settings & calibration
 └── home-assistant/
-    ├── dashboard-card.yaml             # Lovelace cards for Well 1 and Well 2
+    ├── dashboard-card.yaml         # Lovelace cards for Well 1 and Well 2
     └── README.md
 ```
 
 ---
 
-## Quickstart Guide
+## Quickstart
 
-### 1. Gather Parts & Assemble Hardware
-* Follow the **[Bill of Materials (`BOM.md`)](BOM.md)** (~€90-110 per field node, ~€25 for one gateway).
-* Build the depth-channel front end exactly as in **[`docs/wiring.md`](docs/wiring.md)**: **100 Ω shunt**, 1 kΩ series resistor, 3.6 V zener clamp and 100 nF capacitor. The clamp protects the ESP32-S3 if the transmitter ever fails short onto its 18 V supply.
-* Before submerging the EC and temperature probes, follow **Section 1 of the [Field Deployment Guide](docs/field-deployment-guide.md)** to waterproof the cable extensions.
+### 1. Parts & hardware
+* Follow **[`BOM.md`](BOM.md)** (~€85-105 per field node, ~€25 for one gateway).
+* Build the depth-channel front end as in **[`docs/wiring.md`](docs/wiring.md)**: **100 Ω shunt**, 1 kΩ series resistor, 3.6 V zener clamp and 100 nF capacitor. The clamp protects the ESP32-S3 if the transmitter fails short onto its 18 V supply.
+* Extend and waterproof the DS18B20 cable as in **section 1 of the [Field Deployment Guide](docs/field-deployment-guide.md)**.
 
-#### Wiring diagrams
 ![Field node wiring overview](docs/img/node-wiring.svg)
 
-More detail: [depth channel (ESP32 ADC)](docs/img/depth-frontend-esp.svg), [depth channel (ADS1115)](docs/img/depth-frontend-ads1115.svg), [well installation](docs/img/well-installation.svg), and the notes in [`docs/wiring.md`](docs/wiring.md).
+#### Heltec V3 pinout
 
-#### Heltec V3 Pinout Summary
-*`GPIO1` reads the battery voltage. The divider is enabled by `GPIO37`: **LOW on V3/V3.1 boards, HIGH on V3.2** (set `vbat_ctrl_active_low` in the node file, see `docs/wiring.md`). `GPIO35` is the status LED.*
-
-| Component | Pin / Wire | Heltec V3 Pin | Notes |
+| Component | Pin / wire | Heltec V3 pin | Notes |
 | :--- | :--- | :--- | :--- |
-| **MT3608 Boost Input** | `VIN+` / `VIN-` | `Vext` / `GND` | Switched on by `GPIO36` (`LOW` = ON). Tune output to **18.0 V**. Add a 220-470 µF low-ESR capacitor across its input. |
-| **TL-136 Depth Probe** | Red (`V+`) / Blue (`Out`) | MT3608 `VOUT+` / shunt node | **100 Ω 0.1 % shunt** from `Out` to `GND`; the shunt node goes through **1 kΩ** to `GPIO5` (see `docs/wiring.md`). |
-| **EC / TDS Module** | `VCC` / `GND` / `AOUT` | `Vext` / `GND` / `GPIO6` | The *probe* has two electrode wires; only the module has three pins. |
-| **BME280 (optional)** | `VIN` / `GND` / `SDA` / `SCL` | `Vext` / `GND` / `GPIO41` / `GPIO42` | 3.3 V module, I²C address `0x76` (or `0x77`; set `bme280_address`). Mount it inside the enclosure. |
-| **DS18B20 Temp Probe** | `Red` / `Black` / `Yellow` | `Vext` / `GND` / `GPIO4` | **4.7 kΩ pull-up** between `Vext` and `GPIO4`. |
+| **MT3608 boost input** | `VIN+` / `VIN-` | `Vext` / `GND` | Switched by `GPIO36` (`LOW` = ON). Tune output to **18.0 V**. 220-470 µF low-ESR capacitor across its input. |
+| **TL-136 depth probe** | Red (`V+`) / Blue (`Out`) | MT3608 `VOUT+` / shunt node | **100 Ω 0.1 % shunt** from `Out` to `GND`; shunt node through **1 kΩ** to `GPIO5`. |
+| **DS18B20 water temp** | Red / Black / Yellow | `Vext` / `GND` / `GPIO4` | **4.7 kΩ pull-up** between `Vext` and `GPIO4`. |
+| **BME280 air temp + RH** | `VIN` / `GND` / `SDA` / `SCL` | `Vext` / `GND` / `GPIO41` / `GPIO42` | 3.3 V module, address `0x76` (or `0x77`, set `bme280_address`). In a radiation shield outside the box, cable < 1 m. |
 
----
+*`GPIO1` reads the battery. The divider is enabled by `GPIO37`: **LOW on V3/V3.1, HIGH on V3.2** (`vbat_ctrl_active_low`, see `docs/wiring.md`). `GPIO35` is the status LED.*
 
-### 2. Register Your Well on openSenseMap
+### 2. Register your well on openSenseMap
 1. Create a free account at **openSenseMap.org** and click **New senseBox**.
-2. Place your well's marker on the map and add three custom sensors:
-   * **Water Table Depth** (Unit: `m`)
-   * **Electrical Conductivity** (Unit: `µS/cm`)
-   * **Groundwater Temperature** (Unit: `°C`)
-3. Copy the generated **senseBox ID**, **Access Token**, and the three **Sensor IDs**.
+2. Place the marker and add four custom sensors:
+   * **Water Table Depth** (unit `m`)
+   * **Groundwater Temperature** (unit `°C`)
+   * **Air Temperature** (unit `°C`)
+   * **Air Humidity** (unit `%`)
+3. Copy the **senseBox ID**, the **access token** and the four **sensor IDs**.
 
----
+### 3. Configure & flash
+1. Copy `esphome/secrets.yaml.example` to `esphome/secrets.yaml` and fill it in.
+2. Run `esphome/sync-secrets.sh` (ESPHome only reads `secrets.yaml` from the folder of the config it builds).
+3. **Gateway:** `esphome run esphome/gateway/water-well-gateway.yaml` on the indoor Heltec V3 via USB-C.
+4. **Node:** `esphome run esphome/nodes/water-well-node-1.yaml`. The node sleeps right after each reading: hold **BOOT** while pressing **RST** to re-flash over USB later.
 
-### 3. Configure & Flash ESPHome Firmware
-1. Copy `esphome/secrets.yaml.example` to `esphome/secrets.yaml` and fill it in (Wi-Fi, a shared LoRa passphrase, the Home Assistant API key, openSenseMap IDs, and the initial sensor depth of each well).
-2. Run `esphome/sync-secrets.sh` (or copy the file by hand into `esphome/nodes/` and `esphome/gateway/`). **ESPHome only reads `secrets.yaml` from the folder of the config it builds.**
-3. **Flash the gateway:** compile and upload `esphome/gateway/water-well-gateway.yaml` to your indoor Heltec V3 via USB-C.
-4. **Flash a field node:** compile and upload `esphome/nodes/water-well-node-1.yaml`. Because the node sleeps right after each reading, hold **BOOT** while pressing **RST** to re-flash over USB later. Nodes have no Wi-Fi, so firmware updates need USB.
+### 4. Calibrate & deploy
+Follow the **[Field Deployment Guide](docs/field-deployment-guide.md)**: zero and span the depth channel, compare with a manual dip meter, hang the probes from a dedicated line, measure the installation depth, fit the TL-136 vent tube to a breathable enclosure vent, and mount the BME280 in its shield.
 
----
-
-### 4. Calibrate & Deploy in the Well
-Follow the **[Field Deployment & Calibration Guide](docs/field-deployment-guide.md)** to:
-* Zero and span-check the depth channel and compare it with a manual dip meter.
-* Perform a **two-point** EC calibration (for example 84 and 1413 µS/cm).
-* Bundle the probes, hang them from a dedicated line, and measure the exact installation depth.
-* Fit the TL-136 vent tube to a **breathable enclosure vent** with silica gel desiccant.
-
----
-
-### 5. Optional: Home Assistant Dashboard
-1. Adopt the auto-discovered `water-well-gateway` device under **Settings > Devices & Services > ESPHome** (use the `api_encryption_key`).
-2. Paste `home-assistant/dashboard-card.yaml` into a manual dashboard card. Check the entity IDs first (see the comment at the top of that file).
+### 5. Home Assistant
+1. Adopt `water-well-gateway` under **Settings > Devices & Services > ESPHome** (use the `api_encryption_key`).
+2. Paste `home-assistant/dashboard-card.yaml` into a manual card (check the entity IDs first).
 
 ---
 
 ## Adding more wells
-One gateway can listen to several wells within LoRa range (typically 1-5 km across open farmland; less with the antenna close to the ground).
-
 1. Duplicate `esphome/nodes/water-well-node-1.yaml` with a new `node_name`.
-2. In `esphome/secrets.yaml` add the `well_N_*` entries.
+2. Add the `well_N_*` entries to `esphome/secrets.yaml`.
 3. In `esphome/gateway/water-well-gateway.yaml` add a `wN_*` substitution block, a provider under `packet_transport:` and a package entry under `packages:` (copy the Well 2 lines).
 
-Each node adds a random 0-30 s to its sleep time, so nodes do not stay locked on the same transmit moment.
+## Upgrading to the full version later
+The `main` branch adds an EC/TDS sensor (fertilizer leaching), air pressure and an optional ADS1115 for the depth channel. The lite hardware is a subset: the same board, pins and depth front end, so a lite node can be extended without rewiring (EC goes on `GPIO6`, the ADS1115 on the same I²C bus).
 
 ## Sources
-Settings, specifications and claims are traced to their sources in **[`docs/REFERENCES.md`](docs/REFERENCES.md)**, including a list of what could not be verified and the corrections found during the source check.
+See **[`docs/REFERENCES.md`](docs/REFERENCES.md)**.
 
 ## Known limitations
-* Duty cycle: one frame per hour is about 0.01 % airtime, far below the 1 % limit of the 868.0-868.6 MHz sub-band [R25][R22]; check your national rules.
-* Single transmission per cycle, no acknowledgement: a lost frame is a lost reading (*Node Online* shows longer outages).
-* `packet_transport` encryption is a shared passphrase without authentication. Treat the public openSenseMap feed accordingly.
-* The EC curve is an approximation for a cheap analog probe; calibrate it and expect drift. Standing water in a piezometer is not necessarily representative of the aquifer.
-* Depth accuracy with the ESP32 ADC is roughly a few centimetres; the optional ADS1115 (`depth-adc-ads1115.yaml`, see `docs/wiring.md`) improves resolution.
+* Duty cycle: one frame per hour is about 0.01 % airtime, far below the 1 % limit of the 868.0-868.6 MHz sub-band [R25][R22].
+* One transmission per cycle, no acknowledgement: a lost frame is a lost reading (*Node Online* shows longer outages).
+* `packet_transport` encryption is a shared passphrase without authentication.
+* Depth accuracy with the ESP32 ADC is roughly a few centimetres.
+* The BME280 is ±1 °C / ±3 % RH [R24]; without a proper radiation shield the air temperature reads too high in the sun.
