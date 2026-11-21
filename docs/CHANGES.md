@@ -1,5 +1,12 @@
 # Changes
 
+## `lite` branch: EC measurement added back (21 November 2026)
+* Node: DFRobot analog EC/TDS module on `GPIO6`, powered from `Vext`; EC25 compensated with the DS18B20 temperature (2 %/°C) and the `ec_gain` / `ec_offset` two-point calibration. Broadcast ID `ec`. Negative results are clamped to 0.
+* Gateway: *Electrical Conductivity* entity per well and a fifth openSenseMap value (secret `well_N_osem_ec_id` is back).
+* Dashboard: EC25 gauge and EC in the 7-day graph.
+* BOM (EC sensor, calibration fluids, longer extension cable, fourth gland; ~€100-120 per node), wiring notes (new section 5), field guide (EC splice, bench check, calibration 3.2, installation, troubleshooting, maintenance) and both diagrams updated.
+* Still not in `lite`: ADS1115 and air pressure.
+
 ## `lite` branch (21 November 2026)
 A smaller first step: only water table depth, groundwater temperature, and air temperature + humidity.
 

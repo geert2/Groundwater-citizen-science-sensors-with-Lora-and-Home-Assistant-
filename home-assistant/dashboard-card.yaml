@@ -1,5 +1,5 @@
 # Paste into a Home Assistant dashboard using "Manual card" (YAML editor).
-# LITE version: depth, groundwater temperature, air temperature + humidity.
+# LITE version: depth, groundwater temperature, EC, air temperature + humidity.
 #
 # ENTITY IDs: Home Assistant builds them from the device name plus the entity name,
 # e.g. sensor.groundwater_gateway_well_1_water_table_depth_below_ground.
@@ -14,7 +14,7 @@ cards:
   - type: markdown
     content: |
       ## North Field Piezometer (Well 1)
-      Groundwater level and temperature, plus air temperature and humidity at the well.
+      Groundwater level, temperature and conductivity (EC25), plus air temperature and humidity at the well.
 
   - type: horizontal-stack
     cards:
@@ -37,6 +37,18 @@ cards:
         min: 0
         max: 25
         needle: true
+
+      - type: gauge
+        entity: sensor.groundwater_gateway_well_1_electrical_conductivity
+        name: EC25
+        unit: µS/cm
+        min: 0
+        max: 2000        # the analog EC sensor is only reliable up to about 2000 µS/cm
+        needle: true
+        severity:
+          green: 0
+          yellow: 800
+          red: 1500      # adjust to the background EC of your groundwater
 
   - type: entities
     title: Well 1 - telemetry and node health
@@ -65,11 +77,13 @@ cards:
         name: Sensor depth below ground (editable)
 
   - type: history-graph
-    title: Well 1 - 7-day depth
+    title: Well 1 - 7-day depth and EC
     hours_to_show: 168
     entities:
       - entity: sensor.groundwater_gateway_well_1_water_table_depth_below_ground
         name: Depth below ground (m)
+      - entity: sensor.groundwater_gateway_well_1_electrical_conductivity
+        name: EC25 (µS/cm)
 
   - type: history-graph
     title: Well 1 - 7-day temperatures
@@ -84,7 +98,7 @@ cards:
   - type: markdown
     content: |
       ## South Field Piezometer (Well 2)
-      Groundwater level and temperature, plus air temperature and humidity at the well.
+      Groundwater level, temperature and conductivity (EC25), plus air temperature and humidity at the well.
 
   - type: horizontal-stack
     cards:
@@ -107,6 +121,18 @@ cards:
         min: 0
         max: 25
         needle: true
+
+      - type: gauge
+        entity: sensor.groundwater_gateway_well_2_electrical_conductivity
+        name: EC25
+        unit: µS/cm
+        min: 0
+        max: 2000        # the analog EC sensor is only reliable up to about 2000 µS/cm
+        needle: true
+        severity:
+          green: 0
+          yellow: 800
+          red: 1500      # adjust to the background EC of your groundwater
 
   - type: entities
     title: Well 2 - telemetry and node health
@@ -135,11 +161,13 @@ cards:
         name: Sensor depth below ground (editable)
 
   - type: history-graph
-    title: Well 2 - 7-day depth
+    title: Well 2 - 7-day depth and EC
     hours_to_show: 168
     entities:
       - entity: sensor.groundwater_gateway_well_2_water_table_depth_below_ground
         name: Depth below ground (m)
+      - entity: sensor.groundwater_gateway_well_2_electrical_conductivity
+        name: EC25 (µS/cm)
 
   - type: history-graph
     title: Well 2 - 7-day temperatures

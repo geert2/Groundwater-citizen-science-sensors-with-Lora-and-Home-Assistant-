@@ -1,4 +1,4 @@
-# Wiring Notes (LITE): Depth Channel, Power, BME280 and Pinout
+# Wiring Notes (LITE): Depth Channel, Power, EC, BME280 and Pinout
 
 *`[R#]` tags refer to [REFERENCES.md](REFERENCES.md).*
 
@@ -32,9 +32,9 @@ It works if your water column stays below about 4.8 m (the ESP32-S3 ADC saturate
 ```text
 18650 --> Heltec battery connector --> 3.3 V regulator --> Vext switch (GPIO36 LOW = ON)
                                                               |
-                          +-----------------------------------+--------------+
-                          |                                   |              |
-                  [220-470 uF] + MT3608 IN                 BME280       DS18B20 (+4.7 k pull-up to GPIO4)
+                          +-----------------------------------+--------------+--------------+
+                          |                                   |              |              |
+                  [220-470 uF] + MT3608 IN                 BME280       EC module      DS18B20 (+4.7 k pull-up to GPIO4)
                           |
                       MT3608 OUT = 18.0 V  --> TL-136 V+
 ```
@@ -44,7 +44,7 @@ It works if your water column stays below about 4.8 m (the ESP32-S3 ADC saturate
 * Set the MT3608 to 18.0 V **before** connecting the TL-136, and re-check after transport (the trimmer drifts).
 * `Vext` is switched on very early at boot (before the sensors are set up), because the BME280 and DS18B20 are detected once during start-up and must already have power.
 * Active energy is dominated by the boost converter. Keep the `warmup` time as short as the transmitter allows (measure how fast the reading settles).
-* **Optional improvement (not in the firmware):** switch the boost converter with its own MOSFET so it only runs for the depth reading. This saves energy.
+* **Optional improvement (not in the firmware):** switch the boost converter with its own MOSFET so the EC and temperature probes can be read while the 18 V loop is off. This removes possible stray current in the water and saves energy.
 
 ## 3. Pin summary
 
@@ -52,7 +52,7 @@ It works if your water column stays below about 4.8 m (the ESP32-S3 ADC saturate
 | :--- | :--- | :--- |
 | Vext enable | `GPIO36` | LOW = sensor rail ON |
 | Depth signal | `GPIO5` (ADC1) | via 1 kΩ, zener, 100 nF |
-| *(free)* | `GPIO6` (ADC1) | reserved for the EC sensor of the full version |
+| EC signal | `GPIO6` (ADC1) | analog output of the DFRobot EC/TDS module (0-2.3 V) |
 | DS18B20 data | `GPIO4` | 4.7 kΩ to `Vext` |
 | BME280 SDA / SCL | `GPIO41` / `GPIO42` | separate I²C bus from the onboard OLED, 50 kHz; powered from `Vext` |
 | Battery ADC | `GPIO1` | divider 390 k / 100 k (factor 4.9) |
@@ -80,7 +80,14 @@ The polarity of two pins differs between Heltec V3 revisions, and the firmware h
 * The TL-136 vent tube must reach **atmospheric pressure**. A sealed box warms in the sun and changes its internal pressure (1 hPa is about 1 cm of water). Fit a **membrane vent plug** to the enclosure and keep the vent tube open inside it, together with a desiccant packet.
 * Never put the antenna's U.FL connector in contact with water; **never power the board without the antenna attached**.
 
-## 5. BME280 (air temperature + humidity)
+## 5. EC sensor (DFRobot Gravity analog TDS/EC)
+* The **module** (`+` / `-` / `A`) stays in the dry enclosure: `+` to `Vext`, `-` to `GND`, `A` to `GPIO6`. Only the two-wire **probe** goes into the well.
+* The module runs on 3.3-5.5 V and outputs 0-2.3 V [R19], well inside the ADC range at 12 dB attenuation. It is powered from `Vext`, so it only excites the probe for the second or so of a reading. The module drives the probe with AC, which avoids electrolysis of the electrodes.
+* Extend the probe cable with a **two-core twisted pair** (or screened cable); the probe signal is high-impedance and picks up noise. Waterproof the splice as in section 1 of the field guide.
+* Hang the probe at the same depth as the DS18B20, which provides the temperature compensation (2 %/°C to 25 °C), and keep the electrodes **a few cm clear of the TL-136 body**.
+* The firmware converts the voltage with DFRobot's cubic curve and then applies `ec_gain` / `ec_offset` from the two-point calibration (field guide, section 3.2). Readings are only meaningful up to about 2000 µS/cm.
+
+## 6. BME280 (air temperature + humidity)
 * Wire `VIN` to `Vext`, `GND` to `GND`, `SDA` to `GPIO41`, `SCL` to `GPIO42`. It is powered only during a reading, which also avoids self-heating.
 * Mount it **outside the enclosure in a radiation shield** (a small louvred Stevenson-type shield, or a stack of white plant saucers), ideally 1.5 m above ground and on the shaded north side of the post. Without a shield, direct sun makes the air temperature read several degrees too high.
 * Use a 4-core cable of **at most about 1 m** through its own cable gland. I²C is meant for short distances; the firmware runs the bus at 50 kHz to tolerate the extra cable capacitance. Most breakouts already have 10 kΩ pull-ups on SDA/SCL; if readings drop out with a longer cable, add 4.7 kΩ pull-ups from SDA and SCL to `Vext` at the Heltec side.

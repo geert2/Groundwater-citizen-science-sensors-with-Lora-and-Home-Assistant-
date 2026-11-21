@@ -2,6 +2,7 @@
 # Measures only:
 #   * water column above the TL-136 (4-20 mA across a shunt, ESP32 ADC)
 #   * groundwater temperature (DS18B20)
+#   * electrical conductivity, temperature-compensated to 25 °C (DFRobot analog TDS/EC sensor)
 #   * air temperature + relative humidity (BME280, outside in a radiation shield)
 #   * battery voltage (diagnostic)
 # Deep sleep: no network or OTA while asleep [R7]; DS18B20 conversion time [R8][R23].
@@ -23,6 +24,9 @@ substitutions:
   shunt_ohm: "100.0"             # 100 ohm keeps 20 mA (2.0 V) inside the ESP32-S3 ADC range
   zero_offset_m: "0.0"           # add after comparing with a manual dip meter
   span_scale: "1.0"              # multiplies the 0-5 m span (1.0 = nominal)
+  # --- EC channel (two-point calibration, docs/field-deployment-guide.md section 3.2) ---
+  ec_gain: "1.0"
+  ec_offset: "0.0"
   # --- battery divider on the Heltec V3 (390k/100k = x4.9) [R12] ---
   vbat_scale: "4.9"              # calibrate against a multimeter; ESPHome's device page uses 2.0 [R10]
   # ADC_Ctrl (GPIO37) polarity DEPENDS ON THE BOARD REVISION [R11][R13]:
@@ -96,6 +100,8 @@ packet_transport:
         broadcast_id: d
       - id: groundwater_temp_c
         broadcast_id: t
+      - id: ec_compensated_us
+        broadcast_id: ec
       - id: air_temp_c
         broadcast_id: at
       - id: air_humidity
@@ -178,7 +184,36 @@ sensor:
       depth = depth * ${span_scale} + ${zero_offset_m};
       return depth < -0.1f ? NAN : depth;
 
-  # 5. Node battery voltage
+  # 5. EC module output on GPIO6. The probe sits in the well, the module in the dry box.
+  #    The module is powered from Vext, so it only runs (and excites the probe) during a reading.
+  - platform: adc
+    pin: GPIO6
+    id: ec_voltage
+    attenuation: 12db
+    samples: 16
+    sampling_mode: avg
+    update_interval: never
+    internal: true
+
+  # 6. EC at 25 °C, compensated with the DS18B20 temperature (2 %/°C).
+  - platform: template
+    id: ec_compensated_us
+    name: "Electrical Conductivity (EC25)"
+    unit_of_measurement: "µS/cm"
+    accuracy_decimals: 0
+    update_interval: never
+    lambda: |-
+      float v = id(ec_voltage).state;
+      if (isnan(v)) return NAN;
+      float temp = id(groundwater_temp_c).state;
+      if (isnan(temp)) temp = 12.0f;   // fallback if the DS18B20 failed
+      float comp_v = v / (1.0f + 0.02f * (temp - 25.0f));
+      // DFRobot cubic TDS curve [R19]; TDS = EC / 2, so the 0.5 and 2.0 factors cancel.
+      float ec = 133.42f * comp_v * comp_v * comp_v - 255.86f * comp_v * comp_v + 857.39f * comp_v;
+      ec = ec * ${ec_gain} + ${ec_offset};
+      return ec < 0.0f ? 0.0f : ec;
+
+  # 7. Node battery voltage
   - platform: adc
     pin: GPIO1
     id: battery_voltage_v
@@ -225,8 +260,10 @@ script:
       - component.update: bme280_hub
       - component.update: groundwater_temp_c
       - component.update: depth_voltage
+      - component.update: ec_voltage
       - delay: ${ds18b20_wait}             # DS18B20 / BME280 results arrive meanwhile
       - component.update: water_column_m   # needs depth_voltage
+      - component.update: ec_compensated_us # needs the groundwater temperature
       - output.turn_off: vext_power
       - component.update: lora_transport   # broadcast all values
       - delay: ${tx_wait}

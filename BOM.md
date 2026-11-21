@@ -1,12 +1,12 @@
 # Bill of Materials (BOM) & Sourcing Guide - LITE
 
-> `lite` branch: depth (TL-136), groundwater temperature (DS18B20), air temperature + humidity (BME280). No EC sensor or ADS1115.
+> `lite` branch: depth (TL-136), groundwater temperature (DS18B20), electrical conductivity (DFRobot EC/TDS), air temperature + humidity (BME280). No ADS1115.
 
 This checklist covers all hardware, waterproofing consumables, and gateway parts needed to build and deploy a groundwater monitoring station. Prices are approximate (including VAT) based on Benelux/EU electronics suppliers.
 
 ---
 
-## 1. Per-Well Field Node (~€85 - €105)
+## 1. Per-Well Field Node (~€100 - €120)
 Build one of these units for each observation well (piezometer) you want to monitor.
 
 | Status | Component | Exact Specification | Qty | Approx. Cost | Suggested Suppliers (BE / NL / EU) |
@@ -15,6 +15,7 @@ Build one of these units for each observation well (piezometer) you want to moni
 | [ ] | **Depth Sensor** | TL-136 Submersible Level Transmitter (**0-5 m**, **4-20 mA**, 5 m+ **vented** cable) | 1 | €25 - €35 | Amazon.com.be, AliExpress |
 | [ ] | **Temperature Probe** | Waterproof DS18B20 Digital Probe (1 m cable) | 1 | €3 | Gotron, Otronic |
 | [ ] | **Step-Up Boost Module** | MT3608 DC-DC Adjustable Step-Up Converter (set to **18.0 V**) | 1 | €2 | TinyTronics, Otronic |
+| [ ] | **EC / Water Quality Sensor** | DFRobot Gravity Analog TDS/EC Sensor Module + Probe (probe has **two** electrode wires) | 1 | €12 - €14 | TinyTronics, BerryBase |
 | [ ] | **BME280 module** | BME280 breakout, 3.3 V, I²C (4 pins). Check it is a real BME280 (with humidity) and not a BMP280. | 1 | €4 - €6 | TinyTronics, Otronic, AliExpress |
 | [ ] | **Radiation shield** | Small louvred (Stevenson-type) sensor shield, or a DIY stack of white plant saucers; plus 4-core cable (≤ 1 m) and one extra cable gland | 1 | €8 - €15 | AliExpress, Amazon.com.be, DIY |
 | [ ] | **Shunt Resistor** | **100 Ω** (or 160 Ω, see `docs/wiring.md`) metal film, **0.1 %** (25 ppm), 0.25 W | 1 | €0.50 | Gotron, Mouser, Farnell |
@@ -24,7 +25,7 @@ Build one of these units for each observation well (piezometer) you want to moni
 | [ ] | **Battery & Holder** | **Protected** 18650 Li-Ion cell (3000 mAh+, e.g. Samsung 35E with protection) + 1x 18650 holder | 1 | €8 - €12 | TinyTronics, NKON |
 | [ ] | **Waterproof Enclosure** | IP65 Outdoor Junction Box (approx. 150 x 110 x 70 mm) | 1 | €7 - €9 | Hubo, Brico |
 | [ ] | **Enclosure Breather Vent** | M12 or PG7 membrane vent plug (IP67/IP68, e.g. Gore-type) for the TL-136 vent | 1 | €2 - €4 | Amazon.com.be, RS, Farnell |
-| [ ] | **Cable Glands** | PG9 or PG11 Waterproof Nylon Cable Glands (with rubber seals): TL-136, DS18B20, BME280 | 3 | €2 | Hubo, Brico |
+| [ ] | **Cable Glands** | PG9 or PG11 Waterproof Nylon Cable Glands (with rubber seals): TL-136, DS18B20, EC probe, BME280 | 4 | €2 | Hubo, Brico |
 | [ ] | **Desiccant** | Silica Gel Packets (10 g-20 g) | 2 | €1 | Amazon.com.be |
 | [ ] | **Assembly parts** | Perfboard or small PCB, screw terminals, hook-up wire, standoffs, cable ties | 1 set | €4 - €6 | Gotron, Hubo |
 | [ ] | **Hanging line** | 2-3 mm stainless wire or Kevlar line (≥ 5 m) + clamp, so the probe bundle does not hang from its cables | 1 | €3 - €5 | Hubo, Brico |
@@ -35,11 +36,11 @@ Build one of these units for each observation well (piezometer) you want to moni
 ---
 
 ## 2. Submersible Cable Waterproofing (~€10, Shared Across Multiple Nodes)
-Needed to extend the short factory cable of the DS18B20 probe down to 4.5 metres.
+Needed to extend the short factory cables on the EC and DS18B20 probes down to 4.5 metres.
 
 | Status | Item | Specification | Qty | Approx. Cost | Suggested Suppliers |
 | :--- | :--- | :--- | :---: | :---: | :--- |
-| [ ] | **Extension Cable** | Flexible waterproof rubber cable (H05RN-F, 3 x 0.5 mm²) for the DS18B20 (all three cores). | 5 m | €6 - €8 | Hubo, Brico |
+| [ ] | **Extension Cable** | Flexible waterproof rubber cable (H05RN-F, 3 x 0.5 mm²). The DS18B20 uses all three cores; the EC probe uses **two** (twisted pair or screened is better). | 8 m | €6 - €8 | Hubo, Brico |
 | [ ] | **Adhesive Heat-Shrink** | **3:1 Dual-Wall Marine Adhesive-Lined** Heat-Shrink Tubing (3 mm & 10 mm) | 1 pack | €5 | Amazon.com.be, Gotron |
 | [ ] | **Rubber Sealing Tape** | Self-Amalgamating Silicone/Rubber Tape | 1 roll | €5 | Hubo, Brico |
 | [ ] | **Cable Ties** | UV-Resistant Black Nylon Zip Ties | 1 pack | €2 | Hubo, Brico |
@@ -58,12 +59,13 @@ One gateway receives LoRa packets from all neighbouring wells and uploads them t
 ---
 
 ## 4. Calibration & Maintenance Supplies (Shared by Community Group)
-No EC calibration fluids are needed in the lite version.
 
 | Status | Item | Specification | Approx. Cost | Suggested Suppliers |
 | :--- | :--- | :--- | :---: | :--- |
 | [ ] | **Multimeter** | To check boost voltage and battery voltage | €10+ | any |
 | [ ] | **Reference thermometer / hygrometer** *(optional)* | To sanity-check the BME280 and DS18B20 | €10 - €20 | any |
+| [ ] | **EC Calibration Fluid, high point** | Standard **1413 µS/cm** solution (250 ml) | €8 - €10 | Amazon.com.be or aquarium/hydroponics shop |
+| [ ] | **EC Calibration Fluid, low point** | Standard **84 µS/cm** solution (250 ml), for a true two-point calibration | €8 - €10 | same |
 
 ---
 
@@ -71,6 +73,7 @@ No EC calibration fluids are needed in the lite version.
 * **Check LoRa frequency:** verify the Heltec V3 board is labelled **868 MHz** (Europe), not 915 MHz or 433 MHz.
 * **Check TL-136 range & output:** choose **0-5 m** (or 0-4 m), **4-20 mA** and a **vented** cable. Do not buy the 0-10 V or RS485 versions; the firmware assumes a 4-20 mA loop. Check the supply range on the label (listed as 12-32 V [R21]; the 18 V boost covers this).
 * **BME280 vs BMP280:** the BMP280 has no humidity sensor. Look for "BME280" on the chip (square metal can with a hole) and in the listing; many cheap listings mix them up.
+* **EC sensor range:** the cheap analog EC/TDS sensor is meant for fresh water up to about 2000 µS/cm. It is fine for spotting fertilizer leaching or salinisation trends, not for lab-grade numbers.
 * **Use a protected 18650:** the Heltec board charges the cell but has no deep-discharge cut-off.
 * **Heat-shrink type matters:** ordinary thin-wall heat-shrink does not seal against water pressure. Look for **adhesive-lined** / **dual-wall** (*lijmgevuld* / *met lijmlaag*).
 * **Shunt value:** the firmware default is **100 Ω**. If you use a different value, set `shunt_ohm` in the node file. 160 Ω also works with the ESP32 ADC as long as the water column stays below about 4.8 m (20 mA would give 3.2 V, above the ADC's usable range); see `docs/wiring.md`.

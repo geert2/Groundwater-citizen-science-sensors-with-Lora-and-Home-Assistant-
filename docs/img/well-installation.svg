@@ -31,7 +31,7 @@
 <rect x="456" y="600" width="10" height="55" rx="3" fill="#f3e5f5" stroke="#6a1b9a" stroke-width="2"/>
 <rect x="470" y="605" width="10" height="50" rx="3" fill="#fffde7" stroke="#e0a100" stroke-width="2"/>
 <text x="545" y="585" font-size="12" text-anchor="start" font-weight="normal" fill="#222">sensing tips level:</text>
-<text x="545" y="601" font-size="12" text-anchor="start" font-weight="normal" fill="#222">TL-136 + DS18B20</text>
+<text x="545" y="601" font-size="12" text-anchor="start" font-weight="normal" fill="#222">TL-136, EC probe, DS18B20</text>
 <line x1="540" y1="596" x2="484" y2="640" stroke="#777" stroke-width="1.5" stroke-linecap="round"/>
 <line x1="540" y1="660" x2="540" y2="680" stroke="#222" stroke-width="1.5" stroke-linecap="round"/>
 <polyline points="536.4952349192222,671.710451053974 540,680 543.5047650807778,671.710451053974" fill="none" stroke="#222" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>

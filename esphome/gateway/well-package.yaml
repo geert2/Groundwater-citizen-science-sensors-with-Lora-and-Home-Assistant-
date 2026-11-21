@@ -1,8 +1,8 @@
 # Everything the gateway needs for ONE well. Instantiated from water-well-gateway.yaml
 # with these variables: well, well_label, node_name, depth_offset, box_id, token,
-# depth_id, temp_id, air_temp_id, air_hum_id.
+# depth_id, temp_id, ec_id, air_temp_id, air_hum_id.
 # remote_id / broadcast_id behaviour: ESPHome packet_transport [R2] (`internal: false` verified by `esphome config` [R9]).
-# The remote_id values (d, t, at, ah, v) must match `broadcast_id` in common-well-node.yaml.
+# The remote_id values (d, t, ec, at, ah, v) must match `broadcast_id` in common-well-node.yaml.
 
 globals:
   - id: ${well}_last_rx_ms
@@ -52,6 +52,16 @@ sensor:
     device_class: temperature
     state_class: measurement
     accuracy_decimals: 2
+
+  - platform: packet_transport
+    provider: ${node_name}
+    id: ${well}_ec_us
+    remote_id: ec
+    internal: false
+    name: "${well_label} Electrical Conductivity"
+    unit_of_measurement: "µS/cm"
+    state_class: measurement
+    accuracy_decimals: 0
 
   - platform: template
     id: ${well}_depth_bgl
@@ -114,6 +124,7 @@ sensor:
             token: "${token}"
             depth_sensor_id: "${depth_id}"
             temp_sensor_id: "${temp_id}"
+            ec_sensor_id: "${ec_id}"
             air_temp_sensor_id: "${air_temp_id}"
             air_hum_sensor_id: "${air_hum_id}"
             # When the water is below the probe the depth is unknown, so it is not uploaded.
@@ -121,6 +132,7 @@ sensor:
               float col = id(${well}_water_column_m).state;
               return (isnan(col) || col < 0.03f) ? NAN : id(${well}_depth_bgl).state;
             temp_val: !lambda 'return id(${well}_temp_c).state;'
+            ec_val: !lambda 'return id(${well}_ec_us).state;'
             air_temp_val: !lambda 'return id(${well}_air_temp).state;'
             air_hum_val: !lambda 'return id(${well}_air_humidity).state;'
 
