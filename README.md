@@ -1,5 +1,7 @@
 # Agricultural Groundwater Monitor (ESP32 + LoRa)
 
+moved to: https://github.com/geert2/water-management-brook-groundwater
+
 An open-source, low-cost citizen science hardware and software stack for monitoring **water table depth**, **groundwater temperature**, and **electrical conductivity (EC / fertilizer leaching)** under agricultural land.
 
 Built around the **Heltec WiFi LoRa 32 V3 (ESP32-S3 + SX1262)**, battery-powered field nodes transmit hourly readings over raw LoRa (868 MHz) to a central gateway that feeds both **Home Assistant** and the public **openSenseMap** citizen science map.
